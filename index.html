@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EE2120 Project Group Registration</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+    <style>
+        /* Modern Clean Styling Variable Configurations */
+        :root {
+            --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --color-bg-deep: #060814;
+            --color-bg-card: rgba(13, 17, 39, 0.7);
+            --color-bg-input: rgba(7, 10, 24, 0.8);
+            --color-text-primary: #f0f3ff;
+            --color-text-secondary: #8fa0dd;
+            --color-text-tertiary: #5266a5;
+            
+            /* Color Palette */
+            --color-neon-cyan: #00f3ff;
+            --color-neon-purple: #9d4edd;
+            --color-neon-amber: #ffb703;
+            --color-neon-red: #ff477e;
+            --color-neon-green: #39ff14;
+            
+            --border-radius-md: 8px;
+            --border-radius-lg: 16px;
+            --glow-standard: 0 0 15px rgba(0, 243, 255, 0.2);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body { 
+            font-family: var(--font-sans); 
+            background: var(--color-bg-deep); 
+            color: var(--color-text-primary);
+            padding: 40px 20px;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Ambient Dynamic Background Canvas */
+        #particle-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            pointer-events: auto;
+        }
+
+        .wrapper { max-width: 950px; margin: 0 auto; position: relative; z-index: 1; }
+        .sr-only { position: absolute; left: -9999px; }
+
+        /* Top Header Bar */
+        .top-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.25rem 1.5rem;
+            background: rgba(10, 14, 35, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(0, 243, 255, 0.2);
+            border-bottom: none;
+            border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
+            box-shadow: 0 -5px 25px rgba(0, 0, 0, 0.5);
+        }
+        
+        .brand { display: flex; align-items: center; gap: 14px; }
+        
+        .brand-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, var(--color-neon-cyan), var(--color-neon-purple));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 18px;
+            flex-shrink: 0;
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.4);
+            animation: pulse-glow 2s infinite alternate;
+        }
+        
+        .brand-name { font-size: 15px; font-weight: 600; letter-spacing: 0.5px; color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.1); }
+        
+        .brand-sub { 
+            font-size: 11px; 
+            color: var(--color-neon-cyan); 
+            display: flex; 
+            align-items: center; 
+            gap: 6px; 
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 500;
+        }
+
+        /* Live Indicator */
+        .radar-beacon {
+            width: 6px;
+            height: 6px;
+            background: var(--color-neon-cyan);
+            border-radius: 50%;
+            position: relative;
+            display: inline-block;
+        }
+        .radar-beacon::after {
+            content: '';
+            position: absolute;
+            inset: -4px;
+            border: 1px solid var(--color-neon-cyan);
+            border-radius: 50%;
+            animation: radar-pulse 1.8s infinite linear;
+        }
+
+        .admin-link {
+            font-size: 11px;
+            color: var(--color-text-secondary);
+            cursor: pointer;
+            padding: 6px 14px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(143, 160, 221, 0.2);
+            border-radius: var(--border-radius-md);
+            transition: all .25s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .admin-link:hover {
+            color: var(--color-neon-cyan);
+            border-color: var(--color-neon-cyan);
+            background: rgba(0, 243, 255, 0.05);
+            box-shadow: var(--glow-standard);
+        }
+
+        /* Main Workspace Container Wrapper */
+        .outer {
+            background: rgba(6, 9, 22, 0.6);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(0, 243, 255, 0.2);
+            border-radius: 0 0 var(--border-radius-lg) var(--border-radius-lg);
+            padding: 1.5rem;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.7);
+        }
+        
+        .main-grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 1.5rem; align-items: start; }
+        @media(max-width:768px){ .main-grid { grid-template-columns: 1fr; } }
+
+        /* Main Form Card */
+        .live-wire-card {
+            position: relative;
+            border-radius: var(--border-radius-lg);
+            background: linear-gradient(var(--color-bg-card), var(--color-bg-card)) padding-box,
+                        linear-gradient(135deg, rgba(0,243,255,0.3), rgba(157,78,221,0.1), rgba(0,243,255,0.1)) border-box;
+            border: 1px solid transparent;
+            padding: 1.75rem;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.4);
+            overflow: hidden;
+        }
+        
+        .live-wire-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -50%;
+            width: 30%; height: 100%;
+            background: linear-gradient(to right, transparent, rgba(0, 243, 255, 0.08), transparent);
+            transform: skewX(-30deg);
+            animation: light-sweep 6s infinite ease-in-out;
+            pointer-events: none;
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 1.5rem;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            border-left: 3px solid var(--color-neon-cyan);
+            padding-left: 10px;
+        }
+        
+        .field { margin-bottom: 1.25rem; }
+        .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem; }
+        
+        label.lbl {
+            display: block;
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--color-text-secondary);
+            margin-bottom: 6px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        
+        /* Input Fields & Controls */
+        input[type=text], select {
+            width: 100%;
+            font-size: 13px;
+            padding: 10px 14px;
+            border: 1px solid rgba(143, 160, 221, 0.25);
+            border-radius: var(--border-radius-md);
+            background: var(--color-bg-input);
+            color: var(--color-text-primary);
+            outline: none;
+            transition: all .25s ease;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        input[type=text]:focus, select:focus {
+            border-color: var(--color-neon-cyan);
+            box-shadow: var(--glow-standard), inset 0 2px 4px rgba(0,0,0,0.5);
+            background: rgba(13, 17, 39, 0.9);
+        }
+        
+        .select-wrap { position: relative; }
+        .select-wrap select { padding-right: 32px; appearance: none; -webkit-appearance: none; }
+        .select-wrap::after {
+            content: "\ea5f";
+            font-family: 'tabler-icons' !important;
+            position: absolute;
+            right: 12px; top: 50%;
+            transform: translateY(-50%);
+            color: var(--color-text-secondary);
+            font-size: 14px;
+            pointer-events: none;
+            transition: color 0.25s;
+        }
+        .select-wrap:hover::after { color: var(--color-neon-cyan); }
+        
+        .hint { font-size: 11px; color: var(--color-text-secondary); margin-top: 5px; display: flex; align-items: center; gap: 4px; }
+        .hint.warn { color: var(--color-neon-amber); text-shadow: 0 0 8px rgba(255,183,3,0.2); }
+        
+        /* Form Action Button */
+        .submit-btn {
+            width: 100%;
+            margin-top: 1.25rem;
+            padding: 12px;
+            background: linear-gradient(90deg, #4338ca, #534AB7);
+            border: 1px solid rgba(0, 243, 255, 0.3);
+            color: #fff;
+            border-radius: var(--border-radius-md);
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all .25s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        .submit-btn:not(:disabled):hover {
+            background: linear-gradient(90deg, #534AB7, #7F77DD);
+            box-shadow: 0 0 20px rgba(127, 119, 221, 0.5), inset 0 0 10px rgba(255,255,255,0.2);
+            border-color: var(--color-neon-cyan);
+            transform: translateY(-1px);
+        }
+        .submit-btn:disabled {
+            background: rgba(255,255,255,0.05);
+            border-color: rgba(255,255,255,0.05);
+            color: var(--color-text-tertiary);
+            cursor: not-allowed;
+        }
+
+        /* Form Feedback Messages */
+        .msg {
+            margin-top: 1rem;
+            font-size: 12px;
+            padding: 10px 14px;
+            border-radius: var(--border-radius-md);
+            display: none;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid transparent;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        .msg.show { display: flex; animation: flex-appear 0.3s ease; }
+        .msg.success { background: rgba(57, 255, 20, 0.08); color: #adff9e; border-color: rgba(57, 255, 20, 0.3); box-shadow: 0 0 15px rgba(57, 255, 20, 0.1); }
+        .msg.error { background: rgba(255, 71, 126, 0.08); color: #ffb3c6; border-color: rgba(255, 71, 126, 0.3); box-shadow: 0 0 15px rgba(255, 71, 126, 0.1); }
+
+        /* Dashboard Monitor Panel */
+        .panel-head { padding: 1.25rem 1.5rem 0.85rem; border-bottom: 1px solid rgba(0, 243, 255, 0.15); }
+        .panel-title { font-size: 15px; font-weight: 600; color: #fff; letter-spacing: 0.5px; }
+        .panel-sub { font-size: 11px; color: var(--color-text-secondary); margin-top: 3px; }
+        
+        .stats-row { 
+            display: grid; 
+            grid-template-columns: repeat(3, 1fr); 
+            gap: 10px; 
+            padding: 1rem 1.5rem; 
+            border-bottom: 1px solid rgba(0, 243, 255, 0.15); 
+        }
+        .stat { 
+            background: rgba(7, 10, 24, 0.6); 
+            border: 1px solid rgba(143, 160, 221, 0.1);
+            border-radius: var(--border-radius-md); 
+            padding: .65rem .5rem; 
+            text-align: center;
+            transition: border-color 0.25s;
+        }
+        .stat:hover { border-color: rgba(0, 243, 255, 0.3); }
+        .stat-n { font-size: 20px; font-weight: 700; color: #fff; font-family: monospace, var(--font-sans); }
+        #st-total { color: var(--color-neon-purple); text-shadow: 0 0 10px rgba(157,78,221,0.3); }
+        #st-open { color: var(--color-neon-cyan); text-shadow: 0 0 10px rgba(0,243,255,0.3); }
+        #st-full { color: var(--color-neon-red); text-shadow: 0 0 10px rgba(255,71,126,0.3); }
+        .stat-l { font-size: 10px; color: var(--color-text-secondary); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        /* Tab Controls */
+        .tabs { display: flex; gap: 8px; padding: 1rem 1.5rem 0.65rem; }
+        .tab { 
+            padding: 5px 14px; 
+            border-radius: 20px; 
+            font-size: 11px; 
+            font-weight: 500;
+            cursor: pointer; 
+            border: 1px solid rgba(143, 160, 221, 0.15); 
+            color: var(--color-text-secondary); 
+            background: rgba(255,255,255,0.02);
+            transition: all .25s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .tab:hover { color: #fff; border-color: rgba(143, 160, 221, 0.4); }
+        .tab.on { 
+            background: rgba(157, 78, 221, 0.15); 
+            color: #fff; 
+            border-color: var(--color-neon-purple); 
+            font-weight: 600;
+            box-shadow: 0 0 12px rgba(157, 78, 221, 0.25);
+        }
+
+        /* Group Lists and Rows */
+        .group-list { padding: 0 1.5rem 1.25rem; display: flex; flex-direction: column; gap: 8px; max-height: 360px; overflow-y: auto; }
+        
+        .group-list::-webkit-scrollbar { width: 5px; }
+        .group-list::-webkit-scrollbar-track { background: transparent; }
+        .group-list::-webkit-scrollbar-thumb { background: rgba(0, 243, 255, 0.15); border-radius: 10px; }
+        .group-list::-webkit-scrollbar-thumb:hover { background: rgba(0, 243, 255, 0.3); }
+
+        .g-item { 
+            border: 1px solid rgba(143, 160, 221, 0.15); 
+            border-radius: var(--border-radius-md); 
+            background: rgba(7, 10, 24, 0.4);
+            overflow: hidden; 
+            transition: border-color 0.25s, transform 0.25s;
+        }
+        .g-item:hover { border-color: rgba(0, 243, 255, 0.25); }
+        
+        .g-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; cursor: pointer; transition: background .2s; }
+        .g-head:hover { background: rgba(255,255,255,0.02); }
+        .g-name { font-size: 12px; font-weight: 600; color: #fff; display: flex; align-items: center; }
+        
+        .g-badge { font-size: 10px; padding: 2px 9px; border-radius: 20px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .badge-ok { background: rgba(0, 243, 255, 0.1); color: var(--color-neon-cyan); border: 1px solid rgba(0, 243, 255, 0.2); }
+        .badge-full { background: rgba(255, 71, 126, 0.1); color: var(--color-neon-red); border: 1px solid rgba(255, 71, 126, 0.2); }
+        .badge-empty { background: rgba(255,255,255,0.05); color: var(--color-text-secondary); }
+        
+        .g-bar-wrap { height: 3px; background: rgba(255,255,255,0.05); position: relative; }
+        .g-bar { height: 100%; background: linear-gradient(90deg, var(--color-neon-purple), var(--color-neon-cyan)); transition: width .4s cubic-bezier(0.4, 0, 0.2, 1); }
+        .g-bar.full { background: linear-gradient(90deg, var(--color-neon-red), #ff758c); }
+        
+        .g-members { padding: 0 14px; max-height: 0; overflow: hidden; transition: max-height .35s cubic-bezier(0.4, 0, 0.2, 1); background: rgba(0,0,0,0.15); }
+        .g-members.open { max-height: 450px; }
+        
+        .s-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid rgba(255,255,255,0.05); animation: appear 0.25s ease; }
+        .s-row:first-child { border-top-color: transparent; }
+        
+        .s-av { 
+            width: 24px; height: 24px; border-radius: 50%; 
+            background: rgba(0, 243, 255, 0.1); 
+            color: var(--color-neon-cyan); 
+            border: 1px solid rgba(0, 243, 255, 0.2);
+            font-size: 9px; font-weight: 600; 
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0; 
+        }
+        .s-info { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+        .s-name { font-size: 12px; color: #fff; font-weight: 500; }
+        .s-enum { font-size: 10px; color: var(--color-text-secondary); font-family: monospace; margin-top: 1px; }
+        .empty-g { font-size: 11px; color: var(--color-text-tertiary); padding: 10px 0; text-align: center; font-style: italic; }
+
+        /* Admin Options Section */
+        .modal-bg { 
+            display: none; position: fixed; inset: 0; 
+            background: rgba(4, 5, 13, 0.8); 
+            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            align-items: center; justify-content: center; z-index: 100; 
+        }
+        .modal-bg.show { display: flex; }
+        .modal { 
+            background: rgba(10, 14, 35, 0.95); 
+            border: 1px solid var(--color-neon-purple);
+            box-shadow: 0 0 30px rgba(157, 78, 221, 0.3);
+            border-radius: var(--border-radius-lg); padding: 2.25rem; max-width: 340px; width: 90%; text-align: center; 
+            animation: modal-slide 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .lock-icon { 
+            width: 48px; height: 48px; border-radius: 14px; 
+            background: rgba(157, 78, 221, 0.15); 
+            display: flex; align-items: center; justify-content: center; 
+            color: var(--color-neon-purple); font-size: 22px; margin: 0 auto 1rem; 
+            box-shadow: 0 0 15px rgba(157, 78, 221, 0.2);
+        }
+        .modal-title { font-size: 16px; font-weight: 600; color: #fff; margin-bottom: .25rem; letter-spacing: 0.5px; }
+        .modal-sub { font-size: 12px; color: var(--color-text-secondary); margin-bottom: 1.5rem; }
+        
+        input[type=password] { 
+            width: 100%; font-size: 13px; padding: 10px 14px; 
+            border: 1px solid rgba(157, 78, 221, 0.3); border-radius: var(--border-radius-md); 
+            background: var(--color-bg-input); color: #fff; outline: none; margin-bottom: 1rem; 
+            text-align: center; letter-spacing: 2px;
+        }
+        input[type=password]:focus { border-color: var(--color-neon-purple); box-shadow: 0 0 15px rgba(157, 78, 221, 0.3); }
+        
+        .modal-btn { 
+            width: 100%; padding: 11px; background: linear-gradient(90deg, #7b2cbf, #9d4edd); color: #fff; 
+            border: none; border-radius: var(--border-radius-md); font-size: 13px; font-weight: 600; cursor: pointer; 
+            transition: opacity 0.2s; text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .modal-btn:hover { opacity: 0.9; box-shadow: 0 0 15px rgba(157, 78, 221, 0.4); }
+        .pw-err { font-size: 11px; color: var(--color-neon-red); margin-top: .75rem; display: none; text-shadow: 0 0 8px rgba(255,71,126,0.2); }
+
+        /* Admin Export Options Layout */
+        .export-btn { 
+            display: flex; align-items: center; justify-content: center; gap: 8px; 
+            width: 100%; padding: 10px; 
+            border: 1px solid rgba(0, 243, 255, 0.3); border-radius: var(--border-radius-md); 
+            background: rgba(0, 243, 255, 0.04); color: var(--color-neon-cyan); 
+            font-size: 12px; font-weight: 600; cursor: pointer; transition: all .25s; 
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .export-btn:hover { background: rgba(0, 243, 255, 0.1); color: #fff; box-shadow: var(--glow-standard); }
+
+        .danger-zone {
+            margin-top: 1rem;
+            padding-top: 1.25rem;
+            border-top: 1px dashed rgba(255, 71, 126, 0.3);
+        }
+        .clear-btn {
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            width: 100%; padding: 10px;
+            border: 1px solid rgba(255, 71, 126, 0.4); border-radius: var(--border-radius-md);
+            background: rgba(255, 71, 126, 0.05); color: var(--color-neon-red);
+            font-size: 12px; font-weight: 600; cursor: pointer; transition: all .25s;
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .clear-btn:hover {
+            background: rgba(255, 71, 126, 0.15); color: #fff;
+            box-shadow: 0 0 15px rgba(255, 71, 126, 0.3);
+            border-color: var(--color-neon-red);
+        }
+
+        /* Animations */
+        @keyframes radar-pulse {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(2.8); opacity: 0; }
+        }
+        @keyframes pulse-glow {
+            0% { box-shadow: 0 0 10px rgba(0, 243, 255, 0.3); }
+            100% { box-shadow: 0 0 22px rgba(0, 243, 255, 0.6); }
+        }
+        @keyframes light-sweep {
+            0% { left: -50%; }
+            40%, 100% { left: 150%; }
+        }
+        @keyframes modal-slide {
+            from { transform: translateY(15px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes flex-appear { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes appear { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body>
+
+<canvas id="particle-canvas"></canvas>
+
+<h2 class="sr-only">EE2120 Project Group Registration Portal</h2>
+
+<div class="wrapper">
+  <div class="top-bar">
+    <div class="brand">
+      <div class="brand-icon"><i class="ti ti-bolt" aria-hidden="true"></i></div>
+      <div>
+        <div class="brand-name">EE2120 : Electrical Measurements and Instrumentation</div>
+        <div class="brand-sub"><span class="radar-beacon"></span> Project Group Registration Portal</div>
+      </div>
+    </div>
+    <span class="admin-link" onclick="openAdminModal()">
+      <i class="ti ti-lock" aria-hidden="true" style="font-size:11px;margin-right:4px;vertical-align:-1px"></i>Admin Settings
+    </span>
+  </div>
+
+  <div class="outer">
+    <div class="main-grid">
+
+      <div class="live-wire-card" style="backdrop-filter: blur(10px);">
+        <div class="card-title">Register Student</div>
+        
+        <div class="field-row">
+          <div>
+            <label class="lbl" for="inp-fname">First name</label>
+            <input type="text" id="inp-fname" placeholder="Kavya" />
+          </div>
+          <div>
+            <label class="lbl" for="inp-lname">Last name</label>
+            <input type="text" id="inp-lname" placeholder="Perera" />
+          </div>
+        </div>
+        <div class="field">
+          <label class="lbl" for="inp-enum">Registration Number (E-Number)</label>
+          <input type="text" id="inp-enum" placeholder="e.g. E/ ##/ ###" />
+        </div>
+        <div class="field">
+          <label class="lbl" for="grp-select">Select Project Group</label>
+          <div class="select-wrap">
+            <select id="grp-select" onchange="onGroupChange(this)">
+              <option value="">— Choose a project group —</option>
+            </select>
+          </div>
+          <div class="hint" id="grp-hint"><i class="ti ti-database"></i> Connecting to the database...</div>
+        </div>
+        <button class="submit-btn" id="submit-btn" onclick="submitForm()" disabled>
+          <i class="ti ti-square-check" aria-hidden="true" style="margin-right:5px;font-size:14px;vertical-align:-1px"></i>Submit Registration
+        </button>
+        <div class="msg" id="form-msg"></div>
+      </div>
+
+      <div class="live-wire-card" style="padding:0; overflow:hidden;">
+        <div class="panel-head">
+          <div class="panel-title">Groups Details</div>
+          <div class="panel-sub">Select a group below to view registered members</div>
+        </div>
+        
+        <div class="stats-row">
+          <div class="stat"><div class="stat-n" id="st-total">0</div><div class="stat-l">Registered</div></div>
+          <div class="stat"><div class="stat-n" id="st-open">22</div><div class="stat-l">Groups Open</div></div>
+          <div class="stat"><div class="stat-n" id="st-full">0</div><div class="stat-l">Full Groups</div></div>
+        </div>
+        
+        <div class="tabs">
+          <div class="tab on" onclick="setTab('active',this)">Active groups</div>
+          <div class="tab" onclick="setTab('all',this)">All groups</div>
+        </div>
+        
+        <div id="group-list" class="group-list"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <div id="admin-export" style="display:none;background:rgba(6, 9, 22, 0.8); backdrop-filter: blur(16px); padding:0 1.5rem 1.5rem; border: 1px solid rgba(157, 78, 221, 0.3); border-top:none; border-radius:0 0 var(--border-radius-lg) var(--border-radius-lg)">
+    <div style="border-top:1px solid rgba(157, 78, 221, 0.2); padding-top:1.25rem">
+      <button class="export-btn" onclick="exportExcel()">
+        <i class="ti ti-file-download" style="font-size:14px; vertical-align:-1px"></i> Export Registered Students List (Excel)
+      </button>
+    </div>
+    
+    <div class="danger-zone">
+      <button class="clear-btn" onclick="clearAllData()">
+        <i class="ti ti-trash-x" style="font-size:14px; vertical-align:-1px"></i> Clear All Registration Data
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="admin-modal">
+  <div class="modal">
+    <div class="lock-icon"><i class="ti ti-lock" aria-hidden="true"></i></div>
+    <div class="modal-title">Admin Authentication</div>
+    <div class="modal-sub">Enter password to unlock administrative options</div>
+    <input type="password" id="pw-input" placeholder="••••••••" onkeydown="if(event.key==='Enter')checkPw()" />
+    <button class="modal-btn" onclick="checkPw()">Verify Password</button>
+    <div class="pw-err" id="pw-err"><i class="ti ti-alert-triangle"></i> Incorrect password. Access denied.</div>
+    <div style="margin-top:1rem">
+      <span style="font-size:11px;color:var(--color-text-tertiary);cursor:pointer; transition:color 0.2s" onmouseover="this.style.color='var(--color-neon-cyan)'" onmouseout="this.style.color='var(--color-text-tertiary)'" onclick="closeAdminModal()">Cancel</span>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<script>
+    const canvas = document.getElementById('particle-canvas');
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+    let mouse = { x: null, y: null, radius: 100 };
+
+    function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    window.addEventListener('mousemove', (e) => { mouse.x = e.x; mouse.y = e.y; });
+    window.addEventListener('mouseout', () => { mouse.x = null; mouse.y = null; });
+    resizeCanvas();
+
+    class Particle {
+        constructor() {
+            this.x = Math.random() * canvas.width;
+            this.y = Math.random() * canvas.height;
+            this.size = Math.random() * 1.5 + 0.5;
+            this.speedX = Math.random() * 0.4 - 0.2;
+            this.speedY = Math.random() * 0.4 - 0.2;
+            this.baseColor = Math.random() > 0.5 ? 'rgba(0, 243, 255,' : 'rgba(157, 78, 221,';
+            this.alpha = Math.random() * 0.5 + 0.2;
+        }
+        update() {
+            this.x += this.speedX;
+            this.y += this.speedY;
+
+            if (this.x > canvas.width) this.x = 0;
+            else if (this.x < 0) this.x = canvas.width;
+            if (this.y > canvas.height) this.y = 0;
+            else if (this.y < 0) this.y = canvas.height;
+
+            if (mouse.x && mouse.y) {
+                let dx = mouse.x - this.x;
+                let dy = mouse.y - this.y;
+                let distance = Math.hypot(dx, dy);
+                if (distance < mouse.radius) {
+                    let force = (mouse.radius - distance) / mouse.radius;
+                    this.x -= dx / distance * force * 1.5;
+                    this.y -= dy / distance * force * 1.5;
+                }
+            }
+        }
+        draw() {
+            ctx.fillStyle = `${this.baseColor}${this.alpha})`;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    function initParticles() {
+        particles = [];
+        let count = Math.min(Math.floor(canvas.width * canvas.height / 15000), 90);
+        for (let i = 0; i < count; i++) particles.push(new Particle());
+    }
+    initParticles();
+
+    function animateParticles() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        for (let i = 0; i < particles.length; i++) {
+            for (let j = i; j < particles.length; j++) {
+                let dx = particles[i].x - particles[j].x;
+                let dy = particles[i].y - particles[j].y;
+                let dist = Math.hypot(dx, dy);
+                if (dist < 110) {
+                    ctx.strokeStyle = `rgba(0, 243, 255, ${0.08 * (1 - dist/110)})`;
+                    ctx.lineWidth = 0.5;
+                    ctx.beginPath();
+                    ctx.moveTo(particles[i].x, particles[i].y);
+                    ctx.lineTo(particles[j].x, particles[j].y);
+                    ctx.stroke();
+                }
+            }
+            particles[i].update();
+            particles[i].draw();
+        }
+        requestAnimationFrame(animateParticles);
+    }
+    animateParticles();
+</script>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getDatabase, ref, set, push, onValue, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCtyfT2ckjeZNCVQQEeM1mlqZOPHN4NoXc",
+  authDomain: "group-divider.firebaseapp.com",
+  databaseURL: "https://group-divider-default-rtdb.firebaseio.com",
+  projectId: "group-divider",
+  storageBucket: "group-divider.firebasestorage.app",
+  messagingSenderId: "54807361388",
+  appId: "1:54807361388:web:f6bcf46f024773203be549",
+  measurementId: "G-Q2NT7MB0GY"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const studentsRef = ref(db, "students");
+
+const MAX=6, N=22, ADMIN_PW='admin123';
+let students=[];
+let currentTab='active', openGroup=null;
+
+window.submitForm = submitForm;
+window.onGroupChange = onGroupChange;
+window.setTab = setTab;
+window.toggleGroup = toggleGroup;
+window.openAdminModal = openAdminModal;
+window.closeAdminModal = closeAdminModal;
+window.checkPw = checkPw;
+window.exportExcel = exportExcel;
+window.clearAllData = clearAllData;
+
+onValue(studentsRef, (snapshot) => {
+  const data = snapshot.val();
+  students = [];
+  if (data) {
+    Object.keys(data).forEach(key => {
+      students.push(data[key]);
+    });
+  }
+  
+  document.getElementById('grp-hint').innerHTML = '<i class="ti ti-circle-check" style="color:var(--color-neon-green)"></i> Connected successfully.';
+  document.getElementById('submit-btn').removeAttribute('disabled');
+  
+  render();
+});
+
+function getGroups(){
+  const g={};
+  for(let i=1;i<=N;i++) g[i]=[];
+  students.forEach(s=>{if(g[s.group])g[s.group].push(s)});
+  return g;
+}
+
+function buildSelect(){
+  const g=getGroups();
+  const sel=document.getElementById('grp-select');
+  const cur=sel.value;
+  sel.innerHTML='<option value="">— Choose a project group —</option>';
+  for(let i=1;i<=N;i++){
+    const cnt=g[i].length,full=cnt>=MAX;
+    const opt=document.createElement('option');
+    opt.value=i;
+    opt.textContent=`Project Group ${i}  (${cnt}/${MAX})${full?' — Group Full':''}`;
+    opt.disabled=full;
+    sel.appendChild(opt);
+  }
+  if(cur) sel.value=cur;
+}
+
+function onGroupChange(sel){
+  const g=getGroups();
+  const v=parseInt(sel.value);
+  const hint=document.getElementById('grp-hint');
+  if(!v){hint.innerHTML='<i class="ti ti-circle-check" style="color:var(--color-neon-green)"></i> Connected successfully.';hint.className='hint';return}
+  const cnt=g[v].length,rem=MAX-cnt;
+  if(rem===0){hint.textContent='This project group has reached its maximum size limit.';hint.className='hint warn';}
+  else{hint.textContent=`${rem} slot${rem===1?'':'s'} available.`;hint.className='hint';}
+}
+
+function renderList(){
+  const g=getGroups();
+  const el=document.getElementById('group-list');
+  let entries=Object.entries(g);
+  if(currentTab==='active') entries=entries.filter(([,m])=>m.length>0);
+  if(entries.length===0){
+    el.innerHTML='<div style="text-align:center;padding:2rem;font-size:12px;color:var(--color-text-tertiary)"><i class="ti ti-users-off" style="font-size:32px;color:var(--color-neon-purple);display:block;margin-bottom:8px;opacity:.5" aria-hidden="true"></i>no groups registered</div>';
+    return;
+  }
+  el.innerHTML=entries.map(([num,members])=>{
+    const n=parseInt(num),cnt=members.length,full=cnt>=MAX;
+    const pct=Math.round((cnt/MAX)*100);
+    const bc=cnt===0?'badge-empty':full?'badge-full':'badge-ok';
+    const label=cnt===0?'Empty':full?'Full':`${cnt} / ${MAX}`;
+    const isOpen=openGroup===n;
+    const rows=members.map(s=>{
+      const ini=((s.fname[0]||'')+(s.lname[0]||'')).toUpperCase();
+      return `<div class="s-row">
+        <div class="s-av">${ini}</div>
+        <div class="s-info">
+          <span class="s-name">${s.fname} ${s.lname}</span>
+          <span class="s-enum">${s.eNumber}</span>
+        </div>
+      </div>`;
+    }).join('');
+    return `<div class="g-item">
+      <div class="g-head" onclick="toggleGroup(${n})">
+        <span class="g-name"><i class="ti ti-square-chevron-${isOpen?'up':'down'}" style="font-size:14px;margin-right:6px;color:var(--color-neon-cyan)" aria-hidden="true"></i>Project Group ${n}</span>
+        <span class="g-badge ${bc}">${label}</span>
+      </div>
+      <div class="g-bar-wrap"><div class="g-bar${full?' full':''}" style="width:${pct}%"></div></div>
+      <div class="g-members${isOpen?' open':''}">
+        <div style="padding:4px 14px 10px">
+          ${rows||'<div class="empty-g">No students registered yet</div>'}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleGroup(n){openGroup=openGroup===n?null:n;renderList()}
+
+function renderStats(){
+  const g=getGroups();
+  const fullCount=Object.values(g).filter(m=>m.length>=MAX).length;
+  document.getElementById('st-total').textContent=students.length;
+  document.getElementById('st-open').textContent=N-fullCount;
+  document.getElementById('st-full').textContent=fullCount;
+}
+
+function render(){buildSelect();renderList();renderStats()}
+
+function setTab(t,el){
+  currentTab=t;
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+  el.classList.add('on');
+  renderList();
+}
+
+function showMsg(text,type){
+  const el=document.getElementById('form-msg');
+  el.innerHTML=`<i class="ti ti-${type==='success'?'square-check':'alert-circle'}" style="font-size:15px;flex-shrink:0" aria-hidden="true"></i><span>${text}</span>`;
+  el.className='msg show '+type;
+  setTimeout(()=>{el.className='msg'},5000);
+}
+
+async function submitForm(){
+  const fname=document.getElementById('inp-fname').value.trim();
+  const lname=document.getElementById('inp-lname').value.trim();
+  const eNum=document.getElementById('inp-enum').value.trim();
+  const grpEl=document.getElementById('grp-select');
+  const group=parseInt(grpEl.value);
+  
+  if(!fname){showMsg('Error: Please enter a first name.','error');return}
+  if(!lname){showMsg('Error: Please enter a last name.','error');return}
+  if(!eNum){showMsg('Error: Please enter your registration number (E-Number).','error');return}
+  if(!group){showMsg('Error: Please select a project group.','error');return}
+  
+  const g=getGroups();
+  if(g[group].length>=MAX){showMsg('Error: The selected group is already full.','error');return}
+  if(students.find(s=>s.eNumber.toUpperCase()===eNum.toUpperCase())){showMsg(`Error: This E-Number (${eNum}) is already registered.`,'error');return}
+  const fullName=fname+' '+lname;
+  if(students.find(s=>(s.fname+' '+s.lname).toLowerCase()===fullName.toLowerCase())){showMsg(`Error: A student named "${fullName}" is already registered.`,'error');return}
+  
+  try {
+    const newStudentRef = push(studentsRef);
+    await set(newStudentRef, {
+      fname,
+      parentScope: "EE2120 Assignment Stack",
+      lname,
+      eNumber: eNum,
+      group,
+      at: new Date().toISOString()
+    });
+
+    document.getElementById('inp-fname').value='';
+    document.getElementById('inp-lname').value='';
+    document.getElementById('inp-enum').value='';
+    grpEl.value='';
+    document.getElementById('grp-hint').innerHTML='<i class="ti ti-circle-check" style="color:var(--color-neon-green)"></i> Connected successfully.';
+    showMsg(`Success: ${fullName} has been added to Project Group ${group}!`, 'success');
+    openGroup=group;
+    currentTab='active';
+    document.querySelectorAll('.tab').forEach((x,i)=>{x.classList.toggle('on',i===0)});
+  } catch(error) {
+    showMsg('Error: Failed to save registration to the database.', 'error');
+    console.error(error);
+  }
+}
+
+function openAdminModal(){
+  document.getElementById('admin-modal').classList.add('show');
+  document.getElementById('pw-input').value='';
+  document.getElementById('pw-err').style.display='none';
+  setTimeout(()=>document.getElementById('pw-input').focus(),100);
+}
+
+function closeAdminModal(){document.getElementById('admin-modal').classList.remove('show')}
+
+function checkPw(){
+  if(document.getElementById('pw-input').value===ADMIN_PW){
+    closeAdminModal();
+    document.getElementById('admin-export').style.display='block';
+    document.getElementById('admin-export').scrollIntoView({ behavior: 'smooth' });
+  } else {
+    document.getElementById('pw-err').style.display='block';
+    document.getElementById('pw-input').value='';
+    document.getElementById('pw-input').focus();
+  }
+}
+
+async function clearAllData() {
+  if (confirm("⚠️ WARNING: Are you absolutely sure you want to permanently delete ALL registration entries? This cannot be undone.")) {
+    try {
+      await remove(studentsRef);
+      alert("Database cleared successfully. All registrations have been reset.");
+    } catch(err) {
+      alert("Error: Failed to clear the data from the server.");
+      console.error(err);
+    }
+  }
+}
+
+function exportExcel(){
+  if(!students.length){alert('No student registrations available to export.');return}
+  const wb=XLSX.utils.book_new();
+  const all=[['First name','Last name','E-Number','Project Group','Registered at']];
+  [...students].sort((a,b)=>a.group-b.group||a.lname.localeCompare(b.lname)).forEach(s=>{
+    all.push([s.fname,s.lname,s.eNumber,`Project Group ${s.group}`,new Date(s.at).toLocaleString()]);
+  });
+  const ws1=XLSX.utils.aoa_to_sheet(all);
+  ws1['!cols']=[{wch:16},{wch:16},{wch:12},{wch:15},{wch:22}];
+  XLSX.utils.book_append_sheet(wb,ws1,'All Students');
+  const g=getGroups();
+  const sum=[['Project Group','Count','Names','E-Numbers']];
+  for(let i=1;i<=N;i++){
+    const m=g[i];
+    sum.push([`Project Group ${i}`,m.length,m.map(s=>`${s.fname} ${s.lname}`).join(', '),m.map(s=>s.eNumber).join(', ')]);
+  }
+  const ws2=XLSX.utils.aoa_to_sheet(sum);
+  ws2['!cols']=[{wch:15},{wch:8},{wch:50},{wch:30}];
+  XLSX.utils.book_append_sheet(wb,ws2,'Project Group Summary');
+  XLSX.writeFile(wb,'EE2120_Project_Groups.xlsx');
+}
+</script>
+</body>
+</html>
