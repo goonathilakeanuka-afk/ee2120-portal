@@ -172,15 +172,46 @@
             pointer-events: none;
         }
 
+        .card-title-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            border-left: 3px solid var(--color-neon-cyan);
+            padding-left: 10px;
+        }
+
         .card-title {
             font-size: 16px;
             font-weight: 600;
             color: #fff;
-            margin-bottom: 1.5rem;
             letter-spacing: 0.5px;
             text-transform: uppercase;
-            border-left: 3px solid var(--color-neon-cyan);
-            padding-left: 10px;
+        }
+
+        .action-toggle-tabs {
+            display: flex;
+            background: rgba(7, 10, 24, 0.8);
+            border: 1px solid rgba(143, 160, 221, 0.2);
+            border-radius: var(--border-radius-md);
+            padding: 2px;
+        }
+
+        .action-tab {
+            font-size: 10px;
+            padding: 4px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            color: var(--color-text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .action-tab.active {
+            background: rgba(0, 243, 255, 0.15);
+            color: var(--color-neon-cyan);
         }
         
         .field { margin-bottom: 1.25rem; }
@@ -263,6 +294,16 @@
             border-color: rgba(255,255,255,0.05);
             color: var(--color-text-tertiary);
             cursor: not-allowed;
+        }
+
+        .submit-btn.change-mode {
+            background: linear-gradient(90deg, #b74a70, #9d4edd);
+            border-color: rgba(157, 78, 221, 0.4);
+        }
+        .submit-btn.change-mode:not(:disabled):hover {
+            background: linear-gradient(90deg, #c75a85, #ae63ee);
+            box-shadow: 0 0 20px rgba(157, 78, 221, 0.5);
+            border-color: var(--color-neon-purple);
         }
 
         /* Form Feedback Messages */
@@ -498,9 +539,16 @@
     <div class="main-grid">
 
       <div class="live-wire-card" style="backdrop-filter: blur(10px);">
-        <div class="card-title">Register Student</div>
+        <div class="card-title-row">
+          <div class="card-title" id="form-card-title">Register Student</div>
+          <div class="action-toggle-tabs">
+            <div class="action-tab active" id="tab-register" onclick="switchFormMode('register')">Register</div>
+            <div class="action-tab" id="tab-change" onclick="switchFormMode('change')">Change Group</div>
+          </div>
+        </div>
         
-        <div class="field-row">
+        <!-- Registration Fields (Hidden dynamically in change mode) -->
+        <div class="field-row" id="name-fields-row">
           <div>
             <label class="lbl" for="inp-fname">First name</label>
             <input type="text" id="inp-fname" placeholder="Kavya" />
@@ -510,12 +558,14 @@
             <input type="text" id="inp-lname" placeholder="Perera" />
           </div>
         </div>
+
         <div class="field">
           <label class="lbl" for="inp-enum">Registration Number (E-Number)</label>
           <input type="text" id="inp-enum" placeholder="e.g. E/ ##/ ###" />
         </div>
+
         <div class="field">
-          <label class="lbl" for="grp-select">Select Project Group</label>
+          <label class="lbl" for="grp-select" id="lbl-grp-select">Select Project Group</label>
           <div class="select-wrap">
             <select id="grp-select" onchange="onGroupChange(this)">
               <option value="">— Choose a project group —</option>
@@ -523,8 +573,9 @@
           </div>
           <div class="hint" id="grp-hint"><i class="ti ti-database"></i> Connecting to the database...</div>
         </div>
-        <button class="submit-btn" id="submit-btn" onclick="submitForm()" disabled>
-          <i class="ti ti-square-check" aria-hidden="true" style="margin-right:5px;font-size:14px;vertical-align:-1px"></i>Submit Registration
+
+        <button class="submit-btn" id="submit-btn" onclick="handleFormSubmit()" disabled>
+          <i class="ti ti-square-check" id="submit-icon" aria-hidden="true" style="margin-right:5px;font-size:14px;vertical-align:-1px"></i><span id="submit-btn-text">Submit Registration</span>
         </button>
         <div class="msg" id="form-msg"></div>
       </div>
@@ -688,10 +739,13 @@ const db = getDatabase(app);
 const studentsRef = ref(db, "students");
 
 const MAX=6, N=22, ADMIN_PW='admin123';
+let studentsDataMap = {}; // Maps Firebase key to object data
 let students=[];
 let currentTab='active', openGroup=null;
+let formMode = 'register'; // 'register' or 'change'
 
-window.submitForm = submitForm;
+window.handleFormSubmit = handleFormSubmit;
+window.switchFormMode = switchFormMode;
 window.onGroupChange = onGroupChange;
 window.setTab = setTab;
 window.toggleGroup = toggleGroup;
@@ -704,9 +758,13 @@ window.clearAllData = clearAllData;
 onValue(studentsRef, (snapshot) => {
   const data = snapshot.val();
   students = [];
+  studentsDataMap = {};
   if (data) {
     Object.keys(data).forEach(key => {
-      students.push(data[key]);
+      let studentNode = data[key];
+      studentsDataMap[key] = studentNode;
+      // Inject the db node key inside the object array for targeted updates later
+      students.push({ ...studentNode, dbKey: key });
     });
   }
   
@@ -755,7 +813,7 @@ function renderList(){
   let entries=Object.entries(g);
   if(currentTab==='active') entries=entries.filter(([,m])=>m.length>0);
   if(entries.length===0){
-    el.innerHTML='<div style="text-align:center;padding:2rem;font-size:12px;color:var(--color-text-tertiary)"><i class="ti ti-users-off" style="font-size:32px;color:var(--color-neon-purple);display:block;margin-bottom:8px;opacity:.5" aria-hidden="true"></i>no groups registered</div>';
+    el.innerHTML='<div style="text-align:center;padding:2rem;font-size:12px;color:var(--text-tertiary)"><i class="ti ti-users-off" style="font-size:32px;color:var(--color-neon-purple);display:block;margin-bottom:8px;opacity:.5" aria-hidden="true"></i>no groups registered</div>';
     return;
   }
   el.innerHTML=entries.map(([num,members])=>{
@@ -815,6 +873,43 @@ function showMsg(text,type){
   setTimeout(()=>{el.className='msg'},5000);
 }
 
+function switchFormMode(mode) {
+  formMode = mode;
+  const nameRow = document.getElementById('name-fields-row');
+  const cardTitle = document.getElementById('form-card-title');
+  const labelGrpSelect = document.getElementById('lbl-grp-select');
+  const submitBtn = document.getElementById('submit-btn');
+  const submitBtnText = document.getElementById('submit-btn-text');
+  const submitIcon = document.getElementById('submit-icon');
+  
+  document.getElementById('tab-register').classList.toggle('active', mode === 'register');
+  document.getElementById('tab-change').classList.toggle('active', mode === 'change');
+  
+  if (mode === 'register') {
+    nameRow.style.display = 'grid';
+    cardTitle.textContent = 'Register Student';
+    labelGrpSelect.textContent = 'Select Project Group';
+    submitBtnText.textContent = 'Submit Registration';
+    submitBtn.classList.remove('change-mode');
+    submitIcon.className = 'ti ti-square-check';
+  } else {
+    nameRow.style.display = 'none';
+    cardTitle.textContent = 'Change Project Group';
+    labelGrpSelect.textContent = 'Select New Project Group';
+    submitBtnText.textContent = 'Update My Group';
+    submitBtn.classList.add('change-mode');
+    submitIcon.className = 'ti ti-arrows-exchange';
+  }
+}
+
+function handleFormSubmit() {
+  if (formMode === 'register') {
+    submitForm();
+  } else {
+    changeGroupForm();
+  }
+}
+
 async function submitForm(){
   const fname=document.getElementById('inp-fname').value.trim();
   const lname=document.getElementById('inp-lname').value.trim();
@@ -855,6 +950,58 @@ async function submitForm(){
     document.querySelectorAll('.tab').forEach((x,i)=>{x.classList.toggle('on',i===0)});
   } catch(error) {
     showMsg('Error: Failed to save registration to the database.', 'error');
+    console.error(error);
+  }
+}
+
+async function changeGroupForm() {
+  const eNum=document.getElementById('inp-enum').value.trim();
+  const grpEl=document.getElementById('grp-select');
+  const newGroup=parseInt(grpEl.value);
+
+  if(!eNum){showMsg('Error: Please enter your registration number (E-Number).','error');return}
+  if(!newGroup){showMsg('Error: Please select your new project group.','error');return}
+
+  // Find the student by registration number
+  const existingStudent = students.find(s => s.eNumber.toUpperCase() === eNum.toUpperCase());
+  
+  if (!existingStudent) {
+    showMsg(`Error: No registration profile discovered for E-Number (${eNum}). Please register first.`, 'error');
+    return;
+  }
+
+  if (existingStudent.group === newGroup) {
+    showMsg(`Error: You are already registered under Project Group ${newGroup}.`, 'error');
+    return;
+  }
+
+  const g = getGroups();
+  if (g[newGroup].length >= MAX) {
+    showMsg('Error: The selected target project group is full.', 'error');
+    return;
+  }
+
+  try {
+    const targetNodeRef = ref(db, `students/${existingStudent.dbKey}`);
+    await set(targetNodeRef, {
+      fname: existingStudent.fname,
+      parentScope: existingStudent.parentScope || "EE2120 Assignment Stack",
+      lname: existingStudent.lname,
+      eNumber: existingStudent.eNumber,
+      group: newGroup,
+      at: new Date().toISOString()
+    });
+
+    document.getElementById('inp-enum').value='';
+    grpEl.value='';
+    document.getElementById('grp-hint').innerHTML='<i class="ti ti-circle-check" style="color:var(--color-neon-green)"></i> Connected successfully.';
+    showMsg(`Success: ${existingStudent.fname}'s profile moved to Project Group ${newGroup}!`, 'success');
+    
+    openGroup=newGroup;
+    currentTab='active';
+    document.querySelectorAll('.tab').forEach((x,i)=>{x.classList.toggle('on',i===0)});
+  } catch(error) {
+    showMsg('Error: Database write rejected. Failed to relocate profile.', 'error');
     console.error(error);
   }
 }
